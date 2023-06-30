@@ -1,0 +1,78 @@
+ssh yinxihui@hoffman2.idre.ucla.edu
+
+#request working node
+qrsh –l h_data=4G,time=4:00:00
+
+#go to scratch space
+cd /u/scratch/y/yinxihui
+
+#make dir for analysis
+mkdir GW
+chmod 777 GW
+
+#install cellranger
+curl -o cellranger-5.0.1.tar.gz "replace link"
+tar -zxvf cellranger-5.0.1.tar.gz
+cd cellranger-5.0.1
+pwd
+export PATH=/u/scratch/y/yinxihui/cellranger-5.0.1:$PATH
+which cellranger
+
+#unzip tar file (-xvf if .tar, -zxvf if .tar.gz)
+cd ..
+cd GW
+tar -xvf MS_10X_S-21-0108_GBP255.tar
+
+#download reference genome for alignment
+
+#log out, then download datasets using rclone (https://www.hoffman2.idre.ucla.edu/Using-H2/Data-transfer.html)
+ssh -Y yinxihui@dtn.hoffman2.idre.ucla.edu
+
+wget https://downloads.rclone.org/rclone-current-linux-amd64.zip
+unzip rclone-current-linux-amd64.zip
+cp rclone-v1.51.0-linux-amd64/rclone $HOME/bin/.
+
+rclone config
+n
+gdrive
+drive
+##type client id##
+1
+no
+##paste verification code
+y
+rclone copy ##paste name
+
+
+
+#create bash script for running cellranger count
+vi crscript
+chmod +x crscript
+
+#REPLACE ACCORDINGLY (need dir of fastq files, transcriptome, and sample names)
+#!/usr/bin/env bash
+#
+# =============================================================================
+# Setup Instructions
+# =============================================================================
+#
+# 1. Substitute {PE_NAME} below with name of your cluster's shared-memory
+#    parallel environment. If your cluster does not have a parallel environment,
+#    delete this line. However, the job will run with only 1 thread.
+#
+# =============================================================================
+# Job Script
+# =============================================================================
+#
+#$ -N LG_GW
+#$ -V
+#$ -cwd
+#$ -l h_rt=24:00:00,h_data=32G
+#$ -pe shared 4
+
+cd /u/scratch/y/yinxihui/GW
+cellranger count --id=gw_outs --fastqs=/u/scratch/y/yinxihui/MS_10X_S-21-0108_GBP255/LG_NOD_GW_2_GEX --sample=LG_NOD_GW_2_GEX --transcriptome=/u/scratch/y/yinxihui/refdata-gex-mm10-2020-A  --jobmode=local --localmem=64 --localcores=16
+
+qsub crscript
+
+#export file by scp -r or globus
